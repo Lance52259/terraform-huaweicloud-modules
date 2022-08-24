@@ -2,10 +2,10 @@
 
 ## Module内容回顾
 
-除[chapter1](../chapter1/README.md)所介绍的根模块外，module还由若干个子模块构成，其组成部分与根模块相似，包含资源、数据源以及声
-明变量（输入变量及输出变量，如果有的话）定义的`.tf`文件。
+除[chapter1](../chapter1/README.md)所介绍的根模块外，多数module还由若干个子模块构成，其组成部分与根模块相似，包含资源、数据源以
+及变量声明（输入变量及输出变量，如果有的话）定义的`.tf`文件。
 
-假定此module的作用是创建ECS实例，那么该module包括但不仅限于网络模块和ECS模块，其结构如下所示：
+本章以创建ECS实例的module为样例，介绍子模块与根模块的关系，首先了解一下此module的结构：
 
 ```
 huaweicloud-provider-example
@@ -17,27 +17,27 @@ huaweicloud-provider-example
    |- network
    |  |- main.tf
    |  |- variables.tf
-   |  |- outputs.tf (Optional)
+   |  |- outputs.tf
    |- ecs
       |- main.tf
       |- variables.tf
       |- outputs.tf (Optional)
 ```
 
-+ **main.tf**: 包含provider和资源声明。
-+ **variables.tf**: 包含所有资源使用的参数。
-+ **outputs.tf**: 包含所有资源导出的参数。
++ **main.tf**: provider和各模块声明。
++ **variables.tf**: 各模块资源所使用的参数声明。
++ **outputs.tf**: 各模块资源或表达式关系值的输出声明。
 + **README.md**: 此模块的详细描述（推荐每个开发者在每个模块都提供对应的描述）。
-+ **network**: 网络子模块，其包含**main.tf**、**variables.tf**和**outputs.tf**（如果有的话）。
++ **network**: 网络子模块，其包含**main.tf**、**variables.tf**和**outputs.tf**。
 + **ecs**: ECS子模块，其包含**main.tf**、**variables.tf**和**outputs.tf**（如果有的话）。
 
 ## 根模块main.tf
 
-main.tf声明provider引用版本、用户鉴权以及资源使用的脚本，与[chapter1](../chapter1/README.md)不同，本章样例中的`main.tf`包含了
-子模块的声明：
+`main.tf`中包含了provider引用版本、用户鉴权以及资源、数据源的声明，与[chapter1](../chapter1/README.md)不同，本章样例中的
+`main.tf`额外包含了子模块的声明：
 
 ```
-# 用于创建ECS实例的网络资源的子模块定义
+# 包含所有用于创建ECS实例的相关网络资源的子模块声明
 module "network_service" {
   source = "./modules/network"
 
@@ -58,6 +58,7 @@ output "network_id" {
 当网络子模块中的子网资源完成创建后将其网络ID通过输出变量的方式向根模块传递，供其调用。
 
 ```
+# 包含所有用于创建ECS实例的数据源以及ECS实例资源本身的子模块声明
 module "ecs_service" {
   source = "./modules/ecs"
 
@@ -146,4 +147,4 @@ module "ecs_service" {
 `module.network_service.network_id`表示网络ID是由名为`network_service`的子模块中获取到。在创建ECS实例时需要很多网络相关的信息，
 这些值通过诸如上述`module.xxx.xxx`的模块间变量引用或根模块`variables.tf`引用的方式实现。
 
-以上这些内容可通过运行样例进一步理解。
+以上这些内容建议通过实际运行（调试）样例进一步加深理解。

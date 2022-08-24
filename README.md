@@ -1,8 +1,14 @@
 # terraform-huaweicloud-modules
 
-本仓库提供多套[**Terraform**](https://www.terraform.io/language)模板供开发者在其脚本中调用，其使用详情见各模块**README.md**
-文件。此外本仓库还提供了供初学者学习了解华为云资源、模块的[资料](examples/learning/README.md)，欢迎各位初学者前来学习以及欢迎各位开发者
-向本仓库贡献modules代码和样例。
+本仓库提供多套[**Terraform**](https://www.terraform.io/language)模板供开发者参考或在其脚本中引用，各模块使用说明参考其下
+`README.md`文档。欢迎各位初学者前来学习以及欢迎各位开发者向本仓库[贡献modules代码和样例](#如何向我们贡献代码)。
+
+## Module学习材料
+
+本仓库提供了面向初学者的学习资料，可点击下列链接直达对应章节或根据[导航页](examples/learning/README.md)进行选择，
+
++ [Chapter1 如何构建根模块](examples/learning/chapter1/README.md)
++ [Chapter2 如何构建子模块](examples/learning/chapter2/README.md)
 
 ## Module基本介绍
 
@@ -13,39 +19,42 @@
 
 模块主要分为两类:
 
-+ **根模块**：每个Terraform配置中都至少有一个模块，称之为根模块，该模块由主工作目录中的`.tf`或
-  `.tf.json`文件中定义的各个资源组成。
-+ **子模块**：在子目录中定义的被另一个模块调用的模块，称为子模块，该模块由当前子模块目录中的`.tf`或
-  `.tf.json`文件中定义的各个资源组成。子模块可以在同一个配置中多次调用，同样多个配置也可以共用一个子模块。
++ **根模块**：每个Terraform配置中都至少有一个模块，我们称之为根模块。  
+  该模块由主工作目录中的多个`.tf`或`.tf.json`文件组成，用于声明华为云资源或定义子模块，还包含了鉴权的声明以及provider的版本引用。
++ **子模块**：在子目录中定义的被根模块或父模块调用的模块称为子模块，该模块由子目录中的多个`.tf`或`.tf.json`文件组成，内容与根模块
+  大抵相同，区别在于可缺省鉴权部分的声明。子模块的内容可以在同一个根模块或父模块中被多次调用，同样多个根模块或父模块配置也可以共同
+  用于一个子模块中。
 
 ## 模块结构
 
-一个项目通常由上述两种类型的模块构成，如构建一个CCE集群需要使用到网络模块和CCE模块，其中CCE模块对网络模块创建的VPC和子网具有依赖
-性，因此其结构为:
+一个项目通常由上述两种类型的多个模块构成，以树状的形式呈现。  
+如构建一个可用的CCE集群声明CCE集群和节点资源以及关联所需的网络。资源按类型划分为网络和容器两个部分，因此modules目录下应当包含这两
+个部分的子模块目录，其模块结构为:
 
 ```
 huaweicloud-provider-example
 |- main.tf
 |- variables.tf
-|- outputs.tf
+|- outputs.tf (Optional)
+|- README.md (Optional)
 |- modules
    |- network-example
    |  |- main.tf
    |  |- varibales.tf
    |  |- outputs.tf
-   |- cce-example
+   |- container-example
       |- main.tf
       |- varibales.tf
-      |- outputs.tf
+      |- outputs.tf (Optional)
 ```
 
 ## 模块声明
 
-module块描述了父模块调用子模块的语法，其样例如下:
+根模块和父模块中包含一个或多个的module块声明，其声明语法如下所示:
 
 ```hcl
-module "cce" {
-  source = "./modules/cce-example"
+module "container" {
+  source = "./modules/container-example"
 
   vpc_id            = module.network.vpc_id
   network_id        = module.network.network_id
@@ -57,9 +66,10 @@ module关键字代表声明对子模块的调用，关键字后面的标签是�
 中（`{`和`}`之间）的是模块的参数，包含：**source**、**version**、**inputs** 和**meta-arguments**，其约束如下:
 
 + **source**参数在所有模块中都强制要求赋予。
-+ 建议对Hashicorp官方发布的模块使用version参数控制引用版本。
-+ 依赖于其他模块的资源参数都应该定义与**inputs**中，如上述示例中的**vpc_id**、**network_id**和**security_group_id**。
-+ 元参数适用于所有模块。
++ 建议对Hashicorp官方发布的模块使用**version**参数控制引用版本。
++ 所有需要向子模块进行传递的依赖于其他模块的资源参数、属性或当前模块的输入变量都应该定义于**inputs**中，如上述示例中的`vpc_id`、
+`network_id`和`security_group_id`。
++ **meta-arguments**适用于所有模块。
 
 ### source
 
@@ -83,7 +93,17 @@ module "consul" {
 }
 ```
 
-version参数接受一个用于约束版本的字符串，配置此参数后terraform将使用符合约束的最新版本的模块。
+**version**参数接受一个用于约束版本的字符串，配置此参数后Terraform将使用符合约束的最新版本的模块。
+
+### inputs
+
+模块之间通常需要相互引用属性或变量值，**inputs**便是把这些参数或变量值向子模块传递的集中声明。  
+等号左侧是子模块中接收该变量值的变量名称，等号右侧是声明于当前模块下的输入变量或来自其他同级模块的输出变量引用。
+
+```
+vpc_name = var.vpc_name
+vpc_id   = module.network.vpc_id
+```
 
 ### meta-arguments
 
@@ -98,11 +118,9 @@ version参数接受一个用于约束版本的字符串，配置此参数后terr
 
 ## 如何引用子模块中的资源属性
 
-由于模块中的资源被封装起来，外部无法直接访问，因此Terraform提供了子模块输出值声明的方式供用户有选择地将某些值向父模块传递以便其他资
-源进行引用。
-
-例如在network模块中定义VPC，子网和安全组资源，在CCE模块中使用这三个资源的ID。则在network模块中将这三个值输出为三个变量供根模块调用
-并传递给CCE模块:
+由于模块中的资源被封装起来，外部无法直接访问。但Terraform提供了子模块向父模块传递输出值的方式使得用户可以有选择地将某些值向父模块暴
+露以便其他资源进行引用。  
+例如在network模块中定义VPC、子网和安全组三个资源，随后在容器模块中使用这三个资源的ID：
 
 ```
 # network module
@@ -122,13 +140,13 @@ output "security_group_id" {
 ```
 # root module
 module "network" {
-  source = "./modules/vpc-example"
+  source = "./modules/network-example"
 
   ...
 }
 
-module "cce" {
-  source = "./modules/cce-example"
+module "container" {
+  source = "./modules/container-example"
 
   vpc_id            = module.network.vpc_id
   network_id        = module.network.network_id
