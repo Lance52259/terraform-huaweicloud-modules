@@ -1,0 +1,16 @@
+*~
+.*.swp
+*.pem
+terraform.tfstate
+*.backup
+./*.tfstate
+.terraform/
+*.log
+*.terraform
+*.hcl
+
+# Test exclusions
+!command/test-fixtures/**/*.tfstate
+!command/test-fixtures/**/.terraform/
+
+dist
